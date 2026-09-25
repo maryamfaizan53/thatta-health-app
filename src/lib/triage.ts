@@ -18,7 +18,10 @@ const RANK: Record<Tier, number> = { green: 0, yellow: 1, red: 2 };
 const maxTier = (a: Tier, b: Tier): Tier => (RANK[a] >= RANK[b] ? a : b);
 
 /** Evaluates simple rule expressions like "ageMonths<3", "days>5", "pregnant". */
-function evalRule(expr: string, ctx: { ageMonths: number; days: number; pregnant: boolean }): boolean {
+function evalRule(
+  expr: string,
+  ctx: { ageMonths: number; days: number; pregnant: boolean },
+): boolean {
   const e = expr.trim();
   if (e === "pregnant") return ctx.pregnant;
-  const m = /^(ageMonths|days)\s*(<=|>=|
+  const m = e.match(/^(ageMonths|days)\s*(<=|>=|
