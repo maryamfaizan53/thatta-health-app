@@ -654,7 +654,7 @@ function Result({
         </p>
       </motion.main>
 
-      {storeMed && (
+      {storeMed && content.medicines[storeMed] && (
         <div className="fixed inset-0 z-50 flex flex-col bg-card p-6" dir="ltr">
           <button
             type="button"
