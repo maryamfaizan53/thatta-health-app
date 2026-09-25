@@ -666,10 +666,10 @@ function Result({
           </button>
           <div className="flex flex-1 flex-col items-center justify-center gap-8 text-center">
             <p className="font-urdu text-4xl font-extrabold leading-relaxed text-card-foreground">
-              {content.medicines[storeMed].name.ur}
+              {content.medicines[storeMed]?.name.ur}
             </p>
             <p className="text-4xl font-extrabold text-card-foreground">
-              {content.medicines[storeMed].name.en}
+              {content.medicines[storeMed]?.name.en}
             </p>
           </div>
         </div>
