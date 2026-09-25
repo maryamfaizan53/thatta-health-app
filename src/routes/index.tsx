@@ -165,7 +165,7 @@ function Home() {
                   navigate({
                     to: "/triage/$condition",
                     params: { condition: c.id },
-                    search: c.base_tier === "red" ? { direct: true } : {},
+                    search: { direct: c.base_tier === "red" },
                   })
                 }
                 className={`flex min-h-[120px] w-full flex-col items-center justify-center gap-1 rounded-3xl bg-card p-3 shadow-soft transition-transform active:scale-95 ${
@@ -247,7 +247,7 @@ function Home() {
                   navigate({
                     to: "/triage/$condition",
                     params: { condition: match.id },
-                    search: match.base_tier === "red" ? { direct: true } : {},
+                    search: { direct: match.base_tier === "red" },
                   });
                 }}
               >

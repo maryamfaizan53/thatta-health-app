@@ -25,7 +25,7 @@ const DAY_OPTIONS = [
 ] as const;
 
 export const Route = createFileRoute("/triage/$condition")({
-  validateSearch: (s: Record<string, unknown>) => ({ direct: s.direct === true }),
+  validateSearch: (s: Record<string, unknown>) => ({ direct: s["direct"] === true }),
   head: ({ params }) => {
     const c = conditionById(params.condition);
     const name = c ? c.label.en : "Triage";
@@ -470,8 +470,11 @@ function Result({
   const ts = TIER_STYLE[result.tier];
   const tierInfo = content.tiers[result.tier];
   const meds = condition.meds
-    .map((id) => ({ id, ...content.medicines[id] }))
-    .filter(Boolean)
+    .map((id) => {
+      const m = content.medicines[id];
+      return m ? { id, ...m } : null;
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null)
     .filter((m) => answers.ageMonths >= m.min_age_months)
     .filter((m) => !m.max_age_months || answers.ageMonths <= m.max_age_months)
     .filter((m) => !answers.pregnant || m.pregnancy_ok);
