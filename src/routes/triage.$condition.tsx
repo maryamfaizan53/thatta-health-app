@@ -485,7 +485,7 @@ function Result({
       lt(tierInfo.title, lang),
       lt(tierInfo.action, lang),
       ...result.reasons.map((r) => lt(r, lang)),
-      ...((result.tier === "red" ? condition.red_first_aid : condition.home) ?? []).map((s) =>
+      ...(result.tier === "red" ? result.firstAid : result.home).map((s) =>
         lt(s, lang),
       ),
     ];
