@@ -5,7 +5,8 @@ import { ArrowLeft, Minus, Plus, Share2, X } from "lucide-react";
 import { conditionById, content, type Tier } from "@/lib/content";
 import { lt, speak, stopSpeak, t, useApp, useLang, type L } from "@/lib/i18n";
 import { facilitiesFor, directionsUrl } from "@/lib/facilities";
-import { recordTriageEvent, triage } from "@/lib/triage";
+import { triage } from "@/lib/triage";
+import { recordTriageEvent } from "@/lib/events";
 import {
   BigButton,
   CallButton,
