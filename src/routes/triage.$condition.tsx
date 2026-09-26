@@ -448,12 +448,13 @@ function Result({
 
   const result = useMemo(
     () =>
-      triage({
-        condition,
+      triage(content, {
+        conditionId: condition.id,
         ageMonths: direct ? 300 : answers.ageMonths,
+        sex: direct ? "other" : (answers.sex ?? "other"),
         pregnant: direct ? false : answers.pregnant,
         days: direct ? 0 : (answers.days ?? 0),
-        checkedFlagIds: direct ? [] : answers.flags,
+        flags: direct ? [] : answers.flags,
       }),
     [condition, answers, direct],
   );
@@ -470,16 +471,8 @@ function Result({
 
   const ts = TIER_STYLE[result.tier];
   const tierInfo = content.tiers[result.tier];
-  const meds = condition.meds
-    .map((id) => {
-      const m = content.medicines[id];
-      return m ? { id, ...m } : null;
-    })
-    .filter((m): m is NonNullable<typeof m> => m !== null)
-    .filter((m) => answers.ageMonths >= m.min_age_months)
-    .filter((m) => !m.max_age_months || answers.ageMonths <= m.max_age_months)
-    .filter((m) => !answers.pregnant || m.pregnancy_ok);
-  const showMeds = result.tier !== "red" && meds.length > 0;
+  const meds = result.medicines;
+  const showMeds = meds.length > 0;
   const watchFor = [...condition.flags, ...content.global_flags].filter(
     (f) => RANK[f.tier] >= RANK[result.tier],
   );
