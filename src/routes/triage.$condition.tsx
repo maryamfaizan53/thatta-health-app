@@ -532,9 +532,9 @@ function Result({
           <CallButton number="1123" label={t("doctorAdvice", lang)} />
         )}
 
-        {result.tier === "red" && condition.red_first_aid && (
+        {result.firstAid.length > 0 && (
           <Section title={t("doThisNow", lang)}>
-            {condition.red_first_aid.map((s, i) => (
+            {result.firstAid.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-soft">
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${ts.bg} text-lg font-extrabold text-primary-foreground`}>
                   {i + 1}
@@ -545,9 +545,9 @@ function Result({
           </Section>
         )}
 
-        {result.tier !== "red" && condition.home.length > 0 && (
+        {result.home.length > 0 && (
           <Section title={t("homeCare", lang)}>
-            {condition.home.map((s, i) => (
+            {result.home.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-soft">
                 <span className="text-2xl">🏠</span>
                 <p className="text-lg text-card-foreground">{lt(s, lang)}</p>
@@ -574,9 +574,9 @@ function Result({
           </Section>
         )}
 
-        {condition.dont.length > 0 && (
+        {result.dont.length > 0 && (
           <Section title={t("doNot", lang)}>
-            {condition.dont.map((s, i) => (
+            {result.dont.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-soft">
                 <span className="text-2xl font-extrabold text-tier-red">✗</span>
                 <p className="text-lg text-card-foreground">{lt(s, lang)}</p>
