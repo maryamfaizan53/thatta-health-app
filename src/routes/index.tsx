@@ -14,7 +14,7 @@ import {
   type Taluka,
 } from "@/lib/i18n";
 import { lt } from "@/lib/i18n";
-import { impactToday } from "@/lib/triage";
+import { impactToday } from "@/lib/events";
 import {
   AjrakStrip,
   BigButton,

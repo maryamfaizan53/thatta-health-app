@@ -209,7 +209,7 @@ export const content: Content = {
       keywords: ["fever", "bukhar", "temperature", "hot"],
       rules: [
         {
-          if: "ageMonths<3",
+          if: "age_months < 3",
           tier: "red",
           why: {
             en: "A baby under 3 months with fever needs a hospital now",
@@ -218,7 +218,7 @@ export const content: Content = {
           },
         },
         {
-          if: "ageMonths<12",
+          if: "age_months < 12",
           tier: "yellow",
           why: {
             en: "A baby under 1 year with fever should see a doctor",
@@ -266,7 +266,7 @@ export const content: Content = {
       keywords: ["cold", "cough", "flu", "nazla", "khansi", "sneeze"],
       rules: [
         {
-          if: "ageMonths<6",
+          if: "age_months < 6",
           tier: "yellow",
           why: {
             en: "A baby under 6 months with cough should see a doctor",
@@ -313,7 +313,7 @@ export const content: Content = {
       keywords: ["diarrhea", "loose", "motions", "dast", "ishal", "stool"],
       rules: [
         {
-          if: "ageMonths<6",
+          if: "age_months < 6",
           tier: "yellow",
           why: {
             en: "A baby under 6 months with diarrhea should see a doctor",
@@ -446,7 +446,7 @@ export const content: Content = {
       keywords: ["scorpion", "bichoo", "sting"],
       rules: [
         {
-          if: "ageMonths<60",
+          if: "age_months < 60",
           tier: "red",
           why: {
             en: "A scorpion sting in a child under 5 is an emergency",
@@ -566,7 +566,7 @@ export const content: Content = {
       keywords: ["vomit", "stomach", "qai", "pet", "nausea", "belly"],
       rules: [
         {
-          if: "ageMonths<6",
+          if: "age_months < 6",
           tier: "yellow",
           why: {
             en: "A baby under 6 months vomiting should see a doctor",

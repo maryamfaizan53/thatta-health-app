@@ -1,121 +1,92 @@
-import { content, type Condition, type Tier } from "./content";
-import type { L } from "./i18n";
-
-export type TriageInput = {
-  condition: Condition;
-  ageMonths: number;
-  pregnant: boolean;
-  days: number;
-  checkedFlagIds: string[];
-};
-
-export type TriageResult = {
-  tier: Tier;
-  reasons: L[];
-};
-
-const RANK: Record<Tier, number> = { green: 0, yellow: 1, red: 2 };
-const maxTier = (a: Tier, b: Tier): Tier => (RANK[a] >= RANK[b] ? a : b);
-
-/** Evaluates simple rule expressions like "ageMonths<3", "days>5", "pregnant". */
-function evalRule(
-  expr: string,
-  ctx: { ageMonths: number; days: number; pregnant: boolean },
-): boolean {
-  const e = expr.trim();
-  if (e === "pregnant") return ctx.pregnant;
-  const ops = ["<=", ">=", "==", "<", ">"];
-  for (const op of ops) {
-    const idx = e.indexOf(op);
-    if (idx === -1) continue;
-    const key = e.slice(0, idx).trim();
-    const num = Number(e.slice(idx + op.length).trim());
-    const val = key === "ageMonths" ? ctx.ageMonths : key === "days" ? ctx.days : NaN;
-    if (Number.isNaN(val) || Number.isNaN(num)) return false;
-    switch (op) {
-      case "<=":
-        return val <= num;
-      case ">=":
-        return val >= num;
-      case "==":
-        return val === num;
-      case "<":
-        return val < num;
-      case ">":
-        return val > num;
-    }
-  }
-  return false;
+// Sehat Saathi — deterministic triage engine.
+// The AI never decides the tier. It only fills the form (condition, age, flags);
+// this function makes the decision from doctor-reviewed rules in triage-content.json.
+export type Tier = "green" | "yellow" | "red";
+export type Lang = "en" | "ur" | "sd";
+type T = Record<Lang, string>;
+export interface TriageInput {
+  conditionId: string;
+  ageMonths: number;          // form asks age with a months/years toggle
+  sex: "male" | "female" | "other";
+  pregnant?: boolean;         // only asked for females aged 12–50
+  days: number;               // how many days it has been going on (0 = today)
+  flags: string[];            // ids of ticked warning signs (condition + global)
 }
-
-/** Core triage decision. Deterministic, rule-based — no AI. */
-export function triage(input: TriageInput): TriageResult {
-  const { condition, ageMonths, pregnant, days, checkedFlagIds } = input;
-  let tier: Tier = condition.base_tier;
-  const reasons: L[] = [];
-
-  // 1. Condition rules (age etc.)
-  for (const rule of condition.rules) {
-    if (evalRule(rule.if, { ageMonths, days, pregnant })) {
-      tier = maxTier(tier, rule.tier);
-      reasons.push(rule.why);
+export interface TriageResult {
+  tier: Tier;
+  reasons: T[];               // why this tier — shown to the user, in their language
+  firstAid: T[];              // red-tier steps to do while getting help
+  home: T[];                  // green/yellow home care
+  dont: T[];
+  medicines: { id: string; name: T; note: T }[];
+  hiddenMedicines: string[];  // filtered out for age or pregnancy (for transparency)
+}
+const RANK: Record<Tier, number> = { green: 0, yellow: 1, red: 2 };
+const maxTier = (a: Tier, b: Tier): Tier => (RANK[b] > RANK[a] ? b : a);
+function checkRule(expr: string, ageMonths: number): boolean {
+  // Rules are deliberately tiny: "age_months < N" or "age_months >= N".
+  const m = expr.match(/^age_months\s*(<|<=|>|>=)\s*(\d+)$/);
+  if (!m) throw new Error(`Unsupported rule: ${expr}`);
+  const n = Number(m[2]);
+  switch (m[1]) {
+    case "<": return ageMonths < n;
+    case "<=": return ageMonths <= n;
+    case ">": return ageMonths > n;
+    default: return ageMonths >= n;
+  }
+}
+export function triage(content: any, input: TriageInput): TriageResult {
+  const c = content.conditions.find((x: any) => x.id === input.conditionId);
+  if (!c) throw new Error(`Unknown condition: ${input.conditionId}`);
+  let tier: Tier = c.base_tier;
+  const reasons: T[] = [];
+  if (c.base_tier === "red") reasons.push(c.urgent_label ?? content.tiers.red.title);
+  // 1) Emergency signs from any form, then condition warning signs
+  const allFlags = [...content.global_flags, ...c.flags];
+  for (const f of allFlags) {
+    if (input.flags.includes(f.id)) {
+      tier = maxTier(tier, f.tier);
+      reasons.push(f.label);
     }
   }
-
-  // 2. Checked warning signs (condition flags + global flags)
-  const allFlags = [...condition.flags, ...content.global_flags];
-  for (const flag of allFlags) {
-    if (checkedFlagIds.includes(flag.id)) {
-      tier = maxTier(tier, flag.tier);
-      reasons.push(flag.label);
+  // 2) Age rules
+  for (const r of c.rules) {
+    if (checkRule(r.if, input.ageMonths)) {
+      tier = maxTier(tier, r.tier);
+      reasons.push(r.why);
     }
   }
-
-  // 3. Pregnancy raises to at least the configured minimum tier
-  if (pregnant && RANK[tier] < RANK[content.pregnancy.min_tier]) {
-    tier = content.pregnancy.min_tier;
-    reasons.push(content.pregnancy.why);
-  }
-
-  // 4. Lasting too long for home care
-  if (days > condition.max_home_days && RANK[tier] < RANK.yellow) {
-    tier = "yellow";
+  // 3) Lasting too long for home care
+  if (c.base_tier !== "red" && input.days > c.max_home_days) {
+    tier = maxTier(tier, "yellow");
     reasons.push(content.too_long_why);
   }
-
-  return { tier, reasons };
-}
-
-export type TriageEvent = {
-  condition_id: string;
-  tier: Tier;
-  lang: string;
-  taluka: string | null;
-  ts: number;
-};
-
-const EVENTS_KEY = "ss_events";
-
-/** Anonymous local event log (no names, no phone numbers, no exact location). */
-export function recordTriageEvent(ev: Omit<TriageEvent, "ts">) {
-  try {
-    const raw = localStorage.getItem(EVENTS_KEY);
-    const list: TriageEvent[] = raw ? JSON.parse(raw) : [];
-    list.push({ ...ev, ts: Date.now() });
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(list.slice(-500)));
-  } catch {
-    /* storage unavailable */
+  // 4) Pregnancy: at least yellow, and only pregnancy-safe medicines
+  const pregnant = input.sex === "female" && !!input.pregnant;
+  if (pregnant) {
+    tier = maxTier(tier, content.pregnancy.min_tier);
+    reasons.push(content.pregnancy.why);
   }
-}
-
-export function impactToday(): number {
-  try {
-    const raw = localStorage.getItem(EVENTS_KEY);
-    const list: TriageEvent[] = raw ? JSON.parse(raw) : [];
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    return list.filter((e) => e.ts >= start.getTime()).length;
-  } catch {
-    return 0;
+  // 5) Medicines — never shown for red (go to hospital instead)
+  const medicines: TriageResult["medicines"] = [];
+  const hiddenMedicines: string[] = [];
+  if (tier !== "red") {
+    for (const id of c.meds) {
+      const m = content.medicines[id];
+      const tooYoung = input.ageMonths < (m.min_age_months ?? 0);
+      const tooOld = m.max_age_months != null && input.ageMonths > m.max_age_months;
+      const notInPregnancy = pregnant && !m.pregnancy_ok;
+      if (tooYoung || tooOld || notInPregnancy) hiddenMedicines.push(id);
+      else medicines.push({ id, name: m.name, note: m.note });
+    }
   }
+  return {
+    tier,
+    reasons,
+    firstAid: tier === "red" ? (c.red_first_aid ?? []) : [],
+    home: tier === "red" ? [] : c.home,
+    dont: c.dont,
+    medicines,
+    hiddenMedicines,
+  };
 }

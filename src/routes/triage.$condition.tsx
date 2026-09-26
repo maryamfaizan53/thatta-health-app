@@ -5,7 +5,8 @@ import { ArrowLeft, Minus, Plus, Share2, X } from "lucide-react";
 import { conditionById, content, type Tier } from "@/lib/content";
 import { lt, speak, stopSpeak, t, useApp, useLang, type L } from "@/lib/i18n";
 import { facilitiesFor, directionsUrl } from "@/lib/facilities";
-import { recordTriageEvent, triage } from "@/lib/triage";
+import { triage } from "@/lib/triage";
+import { recordTriageEvent } from "@/lib/events";
 import {
   BigButton,
   CallButton,
@@ -447,12 +448,13 @@ function Result({
 
   const result = useMemo(
     () =>
-      triage({
-        condition,
+      triage(content, {
+        conditionId: condition.id,
         ageMonths: direct ? 300 : answers.ageMonths,
+        sex: direct ? "other" : (answers.sex ?? "other"),
         pregnant: direct ? false : answers.pregnant,
         days: direct ? 0 : (answers.days ?? 0),
-        checkedFlagIds: direct ? [] : answers.flags,
+        flags: direct ? [] : answers.flags,
       }),
     [condition, answers, direct],
   );
@@ -469,16 +471,8 @@ function Result({
 
   const ts = TIER_STYLE[result.tier];
   const tierInfo = content.tiers[result.tier];
-  const meds = condition.meds
-    .map((id) => {
-      const m = content.medicines[id];
-      return m ? { id, ...m } : null;
-    })
-    .filter((m): m is NonNullable<typeof m> => m !== null)
-    .filter((m) => answers.ageMonths >= m.min_age_months)
-    .filter((m) => !m.max_age_months || answers.ageMonths <= m.max_age_months)
-    .filter((m) => !answers.pregnant || m.pregnancy_ok);
-  const showMeds = result.tier !== "red" && meds.length > 0;
+  const meds = result.medicines;
+  const showMeds = meds.length > 0;
   const watchFor = [...condition.flags, ...content.global_flags].filter(
     (f) => RANK[f.tier] >= RANK[result.tier],
   );
@@ -491,7 +485,7 @@ function Result({
       lt(tierInfo.title, lang),
       lt(tierInfo.action, lang),
       ...result.reasons.map((r) => lt(r, lang)),
-      ...((result.tier === "red" ? condition.red_first_aid : condition.home) ?? []).map((s) =>
+      ...(result.tier === "red" ? result.firstAid : result.home).map((s) =>
         lt(s, lang),
       ),
     ];
@@ -538,9 +532,9 @@ function Result({
           <CallButton number="1123" label={t("doctorAdvice", lang)} />
         )}
 
-        {result.tier === "red" && condition.red_first_aid && (
+        {result.firstAid.length > 0 && (
           <Section title={t("doThisNow", lang)}>
-            {condition.red_first_aid.map((s, i) => (
+            {result.firstAid.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-soft">
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${ts.bg} text-lg font-extrabold text-primary-foreground`}>
                   {i + 1}
@@ -551,9 +545,9 @@ function Result({
           </Section>
         )}
 
-        {result.tier !== "red" && condition.home.length > 0 && (
+        {result.home.length > 0 && (
           <Section title={t("homeCare", lang)}>
-            {condition.home.map((s, i) => (
+            {result.home.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-soft">
                 <span className="text-2xl">🏠</span>
                 <p className="text-lg text-card-foreground">{lt(s, lang)}</p>
@@ -580,9 +574,9 @@ function Result({
           </Section>
         )}
 
-        {condition.dont.length > 0 && (
+        {result.dont.length > 0 && (
           <Section title={t("doNot", lang)}>
-            {condition.dont.map((s, i) => (
+            {result.dont.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-soft">
                 <span className="text-2xl font-extrabold text-tier-red">✗</span>
                 <p className="text-lg text-card-foreground">{lt(s, lang)}</p>
