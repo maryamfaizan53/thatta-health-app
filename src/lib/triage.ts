@@ -25,7 +25,7 @@ const RANK: Record<Tier, number> = { green: 0, yellow: 1, red: 2 };
 const maxTier = (a: Tier, b: Tier): Tier => (RANK[b] > RANK[a] ? b : a);
 function checkRule(expr: string, ageMonths: number): boolean {
   // Rules are deliberately tiny: "age_months < N" or "age_months >= N".
-  const m = expr.match(AGE_MONTHS_RE);
+  const m = expr.match(/^age_months\s*(<|<=|>|>=)\s*(\d+)$/);
   if (!m) throw new Error(`Unsupported rule: ${expr}`);
   const n = Number(m[2]);
   switch (m[1]) {
